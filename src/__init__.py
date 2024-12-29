@@ -1,7 +1,13 @@
+from fastapi import FastAPI
+from .config.builds import settings
 
 
-def main() -> None:
-    print('Hello, World!')
+app = FastAPI(
+    title=settings.TITLE,
+    description=settings.DESCRIPTION,
+    version=settings.VERSION,
+    debug=settings.DEBUG
+)
 
-if __name__ == '__main__':
-    main()
+
+
