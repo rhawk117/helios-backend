@@ -1,6 +1,6 @@
-from sqlalchemy import Column, String, Date, ForeignKey
+from sqlalchemy import String, ForeignKey, Integer
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from src.db.main import Base
+from main import Base
 import uuid
 from typing import Optional
 
@@ -12,7 +12,7 @@ class UserData(Base):
     Attributes:
         id (str): UUID primary key for UserData.
         enrollment_date (Date): The date the user enrolled.
-        graduation_date (Date): The expected graduation date.
+        graduation_year (Date): The expected graduation date.
         major (str): The user's major field of study.
         minor (Optional[str]): The user's minor field of study.
         concentration (Optional[str]): The user's academic concentration.
@@ -28,13 +28,14 @@ class UserData(Base):
         index=True
     )
 
-    enrollment_date: Mapped[Date] = mapped_column(Date, nullable=False)
-    graduation_date: Mapped[Date] = mapped_column(Date, nullable=False)
+    enrollment_year: Mapped[Integer] = mapped_column(Integer, nullable=False)
+    graduation_year: Mapped[Integer] = mapped_column(Integer, nullable=False)
 
     major: Mapped[str] = mapped_column(String(100), nullable=False)
     minor: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     concentration: Mapped[Optional[str]] = mapped_column(
-        String(100), nullable=True
+        String(100),
+        nullable=True
     )
 
     user: Mapped["User"] = relationship(
@@ -51,8 +52,8 @@ class UserData(Base):
 
 
 class User(Base):
-    """
-    Represents a user in the system.
+    """[table="users"]
+    models the user info, one-to-one -> user_data
 
     Attributes:
         id (str): UUID primary key for the User.
