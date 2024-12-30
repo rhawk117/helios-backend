@@ -1,28 +1,124 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, AsyncEngine
+from sqlalchemy.ext.asyncio import (
+    create_async_engine,
+    async_sessionmaker,
+    AsyncSession,
+    AsyncEngine
+)
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
+from typing import AsyncGenerator, Any, Dict
 from src.config.builds import settings
-from sqlmodel import SQLModel
-from typing import AsyncGenerator
 from src.config.logging import logger
 
-engine: AsyncEngine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.DB_ECHO
-)
+
+_ENGINE_OPTIONS: Dict[str, Any] = {
+    "echo": settings.DB_ECHO,
+    "poolclass": NullPool,  # SQLite does not benefit from connection pooling
+    "connect_args": {
+        "check_same_thread": False,  # Required for async SQLite connections
+        "timeout": 30,
+    }
+}
+
+_SQLITE_PRAGMAS: Dict[str, Any] = {
+    "journal_mode": "WAL",          # write-ahead logging for better concurrency
+    "foreign_keys": "ON",           # referential integrity
+    "synchronous": "NORMAL",        # Balance safety and performance
+    "busy_timeout": 5000,           # Wait up to 5s when database is locked
+    "auto_vacuum": "INCREMENTAL",   # Better than FULL for performance
+    "cache_size": -2000,            # Use 2MB of memory for cache
+    "temp_store": "MEMORY",         # Store temp tables in memory
+}
+
+
+class Base(DeclarativeBase):
+    """Base class for SQLAlchemy models."""
+    pass
+
+
+class Database:
+    _engine: AsyncEngine = None
+    _session_factory: async_sessionmaker = None
+
+    @classmethod
+    def get_engine(cls) -> AsyncEngine:
+        """Return a singleton instance of AsyncEngine."""
+        if cls._engine is None:
+            cls._engine = create_async_engine(
+                settings.DATABASE_URL,
+                **_ENGINE_OPTIONS
+            )
+        return cls._engine
+
+    @classmethod
+    def get_session_factory(cls) -> async_sessionmaker:
+        """Return a singleton instance of async_sessionmaker."""
+        if cls._session_factory is None:
+            cls._session_factory = async_sessionmaker(
+                bind=cls.get_engine(),
+                expire_on_commit=False,  # avoid DetachedInstanceError
+                autoflush=False,         # prevent unexpected flushes
+                autocommit=False         # explicit transaction management
+            )
+        return cls._session_factory
+
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    '''yields an async session; preserves context manager'''
+    async_session = Database.get_session_factory()
+    async with async_session() as session:
+        try:
+            yield session
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Session Error: {str(e)}", exc_info=True)
+            raise
+        finally:
+            await session.close()
+
+
+async def set_sqlite_pragmas() -> None:
+    """configures SQLite with optimal performance and safety settings"""
+    try:
+        async with Database.get_engine().begin() as conn:
+            for pragma, value in _SQLITE_PRAGMAS.items():
+                assert isinstance(pragma, str), f"Invalid pragma: {pragma}"
+                assert isinstance(value, (str, int)), f"Invalid value for {pragma}: {value}"
+                await conn.execute(f"PRAGMA {pragma} = {value};")
+
+            # Verify that WAL mode is set
+            result = await conn.execute("PRAGMA journal_mode;")
+            mode = await result.scalar()
+            if mode.upper() != "WAL":
+                logger.warning(
+                    "WAL mode not enabled. This may impact performance."
+                )
+    except Exception as e:
+        logger.error(f"Failed to set SQLite PRAGMAs: {str(e)}", exc_info=True)
+        raise
 
 
 async def init_db() -> None:
-    logger.info("Creating database tables")
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    logger.info("Database tables created")
-
-
-async def get_session() -> AsyncGenerator:
-    async with AsyncSession(bind=engine) as session:
-        yield session
+    """initializes the database and apply SQLite PRAGMAs."""
+    logger.info("Initializing SQLite Database...")
+    try:
+        await set_sqlite_pragmas()
+        async with Database.get_engine().begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database initialized successfully.")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {
+                     str(e)}", exc_info=True)
+        raise
 
 
 async def drop_db() -> None:
+    """Drop all database tables safely."""
     logger.warning("Dropping database tables...")
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+    try:
+        async with Database.get_engine().begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+        logger.warning("Database tables dropped successfully.")
+    except Exception as e:
+        logger.error(f"Failed to drop database: {str(e)}", exc_info=True)
+        raise

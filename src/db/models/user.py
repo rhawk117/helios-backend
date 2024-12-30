@@ -1,73 +1,103 @@
-from sqlmodel import SQLModel, Field, Relationship, Column, String
+from sqlalchemy import Column, String, Date, ForeignKey
+from sqlalchemy.orm import relationship, Mapped, mapped_column
+from src.db.main import Base
 import uuid
-from datetime import datetime, timezone
 from typing import Optional
-import enum
 
 
-class Semesters(str, enum.Enum):
-    FALL = 'FALL'
-    SPRING = 'SPRING'
+class UserData(Base):
+    """[table=user_data]
+    user-specific information; required to create a user 
 
+    Attributes:
+        id (str): UUID primary key for UserData.
+        enrollment_date (Date): The date the user enrolled.
+        graduation_date (Date): The expected graduation date.
+        major (str): The user's major field of study.
+        minor (Optional[str]): The user's minor field of study.
+        concentration (Optional[str]): The user's academic concentration.
+        user (User): Back-reference to the associated User instance.
+    """
+    __tablename__ = "user_data"
 
-def get_utc_now() -> datetime:
-    return datetime.now(timezone.utc)
-
-
-class User(SQLModel, table=True):
-    __tablename__ = 'users'  # type: ignore
-
-    id: str = Field(
+    id: Mapped[str] = mapped_column(
+        String(36),
         primary_key=True,
-        default_factory=lambda: str(uuid.uuid4()),
+        default=lambda: str(uuid.uuid4()),
+        unique=True,
         index=True
     )
 
-    username: str = Field(max_length=50, nullable=False, unique=True)
-    password: str = Field(min_length=8, nullable=False)
-    email: str = Field(max_length=50, nullable=False, unique=True)
-    created_at: datetime = Field(
-        default_factory=get_utc_now, nullable=False
+    enrollment_date: Mapped[Date] = mapped_column(Date, nullable=False)
+    graduation_date: Mapped[Date] = mapped_column(Date, nullable=False)
+
+    major: Mapped[str] = mapped_column(String(100), nullable=False)
+    minor: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    concentration: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True
     )
-    userdata: Optional["UserData"] = Relationship(
-        sa_relationship_kwargs={
-            "back_populates": "user",
-            "uselist": False,
-            "cascade": "all, delete-orphan"
-        }
+
+    user: Mapped["User"] = relationship(
+        "User",
+        back_populates="user_data",
+        uselist=False
+    )
+
+    def __repr__(self):
+        return (
+            f"<UserData(id='{self.id}', major='{self.major}', "
+            f"minor='{self.minor}', concentration='{self.concentration}')>"
+        )
+
+
+class User(Base):
+    """
+    Represents a user in the system.
+
+    Attributes:
+        id (str): UUID primary key for the User.
+        username (str): Unique username.
+        password (str): Hashed user password.
+        email (str): Unique user email.
+        user_data_id (str): Foreign key reference to UserData.
+        user_data (UserData): One-to-one relationship with UserData.
+    """
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+        unique=True,
+        index=True
+    )
+    username: Mapped[str] = mapped_column(
+        String(50),
+        unique=True,
+        nullable=False
+    )
+    password: Mapped[str] = mapped_column(String(255), nullable=False)
+    email: Mapped[str] = mapped_column(
+        String(100),
+        unique=True,
+        nullable=False
+    )
+
+    user_data_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("user_data.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False
+    )
+    user_data: Mapped[UserData] = relationship(
+        "UserData",
+        back_populates="user_data",
+        uselist=False,
+        cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
-        return f"<User_{self.username}_{self.email}>"
-
-
-class UserData(SQLModel, table=True):
-    __tablename__ = 'user_data'  # type: ignore
-
-    user_id: str = Field(
-        foreign_key="users.id",
-        primary_key=True
-    )
-
-    enrollment_semester: Semesters = Field(
-        sa_column=Column(String, nullable=False)
-    )
-    graduation_semester: Semesters = Field(
-        sa_column=Column(String, nullable=False)
-    )
-
-    enrollment_year: int = Field(nullable=False)
-    graduation_year: int = Field(nullable=False)
-
-    major: str = Field(nullable=False, max_length=20)
-    minor: Optional[str] = Field(max_length=20)
-    concentration: Optional[str] = Field(max_length=20)
-
-    user: Optional[User] = Relationship(
-        sa_relationship_kwargs={
-            "back_populates": "userdata"
-        }
-    )
-
-    def __repr__(self) -> str:
-        return f"<UserData_{self.user_id}_{self.major}_{self.minor}_{self.concentration}>"
+        return (
+            f"<User(id='{self.id}', username='{self.username}', "
+            f"email='{self.email}')>"
+        )
