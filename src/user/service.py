@@ -79,6 +79,4 @@ class UserService(CRUDService[User]):
         )
 
 
-user_mngr = UserService()
-
 
