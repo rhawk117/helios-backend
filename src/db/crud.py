@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.future import select
 
 ModelT = TypeVar("ModelT")
-
+    
 
 class CRUDService(Generic[ModelT]):
     """
@@ -47,8 +47,8 @@ class CRUDService(Generic[ModelT]):
 
     async def get_by(
         self,
-        session: AsyncSession,
         predicate: Any,
+        session: AsyncSession,
         options: Optional[List] = None
     ) -> Optional[ModelT]:
         """
