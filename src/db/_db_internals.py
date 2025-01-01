@@ -1,11 +1,19 @@
 from typing import Optional
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine, async_sessionmaker
-from ..config.builds import settings
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    create_async_engine,
+    async_sessionmaker
+)
+from ..config.app_config import settings
 from sqlalchemy import text
 from typing import Dict, Any
 
 
 class _DBInterface:
+    '''
+       internal database interface for abstracting the ORM engine &
+       session maker configurations
+    '''
     _engine: Optional[AsyncEngine] = None
     _session_factory: Optional[async_sessionmaker] = None
 
@@ -24,6 +32,7 @@ class _DBInterface:
         if cls._engine is None:
             cls._engine = create_async_engine(
                 settings.DATABASE_URL,
+                echo=settings.DB_ECHO,
                 connect_args=cls._CONNECT_ARGS
             )
         return cls._engine
@@ -42,3 +51,4 @@ class _DBInterface:
                 expire_on_commit=False
             )
         return cls._session_factory
+
