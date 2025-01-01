@@ -1,8 +1,15 @@
-from sqlalchemy import String, ForeignKey, Integer, Column
+from sqlalchemy import String, ForeignKey, Integer, Column, Enum
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 import uuid
 from typing import Optional
-from src.db.main import Base
+from src.db import Base
+import enum
+
+
+class Permissions(enum.Enum):
+    user = 'user'
+    moderator = 'moderator'
+    admin = 'admin'
 
 
 class User(Base):
@@ -18,6 +25,7 @@ class User(Base):
         user_data (UserData): One-to-one relationship with UserData.
     """
     __tablename__ = "users"
+
     id = Column(
         String(36),
         primary_key=True,
@@ -31,9 +39,15 @@ class User(Base):
         nullable=False
     )
     password = Column(String(255), nullable=False)
+
     email = Column(
         String(100),
         unique=True,
+        nullable=False
+    )
+    permission = Column(
+        String(10),
+        default=Permissions.user.value,
         nullable=False
     )
 
