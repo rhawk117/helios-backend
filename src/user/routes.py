@@ -1,14 +1,16 @@
+from typing import List
+
 from fastapi import Depends, HTTPException, status, APIRouter
-from src.db import get_session
-from src.user.service import UserService
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.db.main import get_db
+from src.models import User
 from src.user.schemas.user import (
     CreateUser,
     UserRead,
     UserUpdate
 )
-from src.models import User
-from typing import List
+from src.user.service import UserService
 
 user_router = APIRouter(prefix="/user", tags=["user"])
 user_service = UserService()
@@ -19,7 +21,7 @@ user_service = UserService()
 @user_router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def register_user(
     create_user_schema: CreateUser,
-    db: AsyncSession = Depends(get_session)
+    db: AsyncSession = Depends(get_db)
 ) -> UserRead:
 
     if await user_service.username_exists(db, create_user_schema):
@@ -39,7 +41,7 @@ async def register_user(
 
 
 @user_router.get("/all", response_model=List[UserRead], status_code=status.HTTP_200_OK)
-async def get_all_users(db: AsyncSession = Depends(get_session)) -> List[UserRead]:
+async def get_all_users(db: AsyncSession = Depends(get_db)) -> List[UserRead]:
     users = await user_service.get_all(db)
     return users
 
@@ -47,7 +49,7 @@ async def get_all_users(db: AsyncSession = Depends(get_session)) -> List[UserRea
 
 
 @user_router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: str, db: AsyncSession = Depends(get_session)) -> None:
+async def delete_user(user_id: str, db: AsyncSession = Depends(get_db)) -> None:
     deleted_user = await user_service.get_by(User.id == user_id, db)
     if not deleted_user:
         raise HTTPException(
@@ -58,7 +60,7 @@ async def delete_user(user_id: str, db: AsyncSession = Depends(get_session)) -> 
 
 
 @user_router.get("/{user_id}", response_model=UserRead, status_code=status.HTTP_200_OK)
-async def get_user(user_id: str, db: AsyncSession = Depends(get_session)) -> UserRead:
+async def get_user(user_id: str, db: AsyncSession = Depends(get_db)) -> UserRead:
     '''gets a user given an ID; 404 if not found'''
     user = await user_service.get_by(User.id == user_id, db)
     if not user:
@@ -73,7 +75,7 @@ async def get_user(user_id: str, db: AsyncSession = Depends(get_session)) -> Use
 async def update_user(
     user_update_schema: UserUpdate,
     user_id: str,
-    db: AsyncSession = Depends(get_session)
+    db: AsyncSession = Depends(get_db)
 ) -> dict:
 
     user = await user_service.get_by(User.id == user_id, db)

@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict 
     
 class Settings(BaseSettings):
-    '''the application configuration'''    
+    '''the application configuration''' 
     TITLE: str = 'Helios API'
     VERSION: str = '0.1'
     DESCRIPTION: str = 'the backend for the Helios platform.'
@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     LOG_TO_FILE: bool = True
     
     SECRET_KEY: str 
+    ADMIN_SEED_PWD: str
+    
+    
     DATABASE_URL: str
     DEBUG: bool = True 
     DB_ECHO: bool = True 

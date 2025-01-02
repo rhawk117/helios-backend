@@ -1,10 +1,9 @@
 from typing import TypeVar, Generic, Type, Optional, List, Any
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from sqlalchemy.future import select
 
 ModelT = TypeVar("ModelT")
-    
+
 
 class CRUDService(Generic[ModelT]):
     """
@@ -72,7 +71,7 @@ class CRUDService(Generic[ModelT]):
         result = await session.execute(select(self.model))
         return list(result.scalars().all())
 
-    async def get_all_limit(
+    async def get_limited(
         self,
         session: AsyncSession,
         skip: int = 0,

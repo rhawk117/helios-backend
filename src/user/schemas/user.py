@@ -1,11 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field, model_validator, ConfigDict
-from typing import Optional, Any
 import enum
-
-class Permissions(enum.Enum):
-    user = 'user'
-    moderator = 'moderator'
-    admin = 'admin'
+from typing import Optional, Any
+from pydantic import BaseModel, EmailStr, Field, model_validator, ConfigDict
+from src.models.user import Permissions 
 
 class ERRORS:
     DIGIT = "Password must contain at least one digit."
@@ -21,7 +17,7 @@ class ValidateUser:
         assert not ' ' in field, f"{field_name} cannot have spaces."
 
     @staticmethod
-    def check_pwd(password) -> None:
+    def check_pwd(password: str) -> None:
         '''
             checks password for:
             - whitespace
@@ -34,16 +30,13 @@ class ValidateUser:
         assert any(char.islower() for char in password), ERRORS.LOWER
         assert any(char.isupper() for char in password), ERRORS.UPPER
 
-
 class BaseUser(BaseModel):
     username: str = Field(..., min_length=3, max_length=100)
     password: str = Field(..., min_length=8, max_length=255)
     email: EmailStr = Field(..., max_length=100)
-    permission: Permissions = Permissions.user
 
     @model_validator(mode='after')
     def validate_user_create(cls, model) -> Any:
-        global no_whitespace, check_pwd
         if model.username:
             ValidateUser.no_whitespace(model.username, "Username")
         if model.password:
@@ -53,7 +46,6 @@ class BaseUser(BaseModel):
 
 class CreateUser(BaseUser):
     pass    
-
 
 class CreateAdmin(BaseUser):
     permission: Permissions = Permissions.admin

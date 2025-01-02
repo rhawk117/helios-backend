@@ -1,16 +1,13 @@
-from sqlalchemy import String, ForeignKey, Integer, Column, Enum
-from sqlalchemy.orm import relationship, Mapped, mapped_column
-import uuid
-from typing import Optional
-from src.db import Base
 import enum
+import uuid
+from sqlalchemy import String, Column, CheckConstraint
+from src.db.main import Base
 
 
-class Permissions(enum.Enum):
+class Permissions(str, enum.Enum):
     user = 'user'
     moderator = 'moderator'
     admin = 'admin'
-
 
 class User(Base):
     """[table="users"]
@@ -24,6 +21,7 @@ class User(Base):
         user_data_id (str): Foreign key reference to UserData.
         user_data (UserData): One-to-one relationship with UserData.
     """
+
     __tablename__ = "users"
 
     id = Column(
@@ -33,11 +31,13 @@ class User(Base):
         unique=True,
         index=True
     )
+    
     username = Column(
         String(50),
         unique=True,
         nullable=False
     )
+    
     password = Column(String(255), nullable=False)
 
     email = Column(
@@ -45,12 +45,22 @@ class User(Base):
         unique=True,
         nullable=False
     )
+    
     permission = Column(
-        String(10),
+        String(25),
         default=Permissions.user.value,
         nullable=False
     )
 
+    __table_args__ = (
+        CheckConstraint(
+            permission.in_([perm.value for perm in Permissions]),
+            name="check_permission"
+        ),   
+    )
+
+
+    
     # user_data: Mapped[UserData] = relationship(
     #     "UserData",
     #     back_populates="user_data",
@@ -63,3 +73,4 @@ class User(Base):
             f"<User(id='{self.id}', username='{self.username}', "
             f"email='{self.email}')>"
         )
+

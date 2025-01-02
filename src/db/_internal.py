@@ -1,12 +1,14 @@
+from typing import Dict, Any
 from typing import Optional
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     create_async_engine,
     async_sessionmaker
 )
-from ..config.app_config import settings
-from sqlalchemy import text
-from typing import Dict, Any
+
+from src.config.app_config import settings
+from pathlib import Path
 
 
 class _DBInterface:
@@ -39,16 +41,18 @@ class _DBInterface:
 
     @classmethod
     async def init_pragmas(cls) -> None:
+        '''initializes the SQLite pragmas using _PRAGMAS'''
         async with cls.get_engine().begin() as conn:
             for pragma, value in cls._PRAGMAS.items():
                 await conn.execute(text(f"PRAGMA {pragma} = {value}"))
 
     @classmethod
     def get_session_factory(cls) -> async_sessionmaker:
+        '''returns the async session factory'''
         if cls._session_factory is None:
             cls._session_factory = async_sessionmaker(
                 bind=cls.get_engine(),
                 expire_on_commit=False
             )
         return cls._session_factory
-
+    

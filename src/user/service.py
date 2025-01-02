@@ -1,13 +1,13 @@
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.db import CRUDService
-from ..models.user import User
+from src.db.crud import CRUDService
+from src.utils.security import PasswordUtils
 from .schemas import (
     CreateUser,
     UserUpdate,
     BaseUser
 )
-from fastapi import HTTPException, status
-from src.utils.security import PasswordUtils
+from src.models.user import User
 
 
 class UserService(CRUDService[User]):
@@ -16,8 +16,7 @@ class UserService(CRUDService[User]):
 
     async def username_exists(self, db: AsyncSession, user_schema_obj: BaseUser) -> bool:
         existing_username = await self.get_by(
-            User.username == user_schema_obj.username,
-            db,
+            User.username == user_schema_obj.username, db
         )
         return existing_username is not None
 
@@ -27,8 +26,7 @@ class UserService(CRUDService[User]):
         user_schema_obj: BaseUser,
     ) -> bool:
         existing_email = await self.get_by(
-            User.email == user_schema_obj.email,
-            db,
+            User.email == user_schema_obj.email, db
         )
         return existing_email is not None
 
@@ -38,7 +36,11 @@ class UserService(CRUDService[User]):
             raise ValueError("Password not provided.")
         serialized_schema['password'] = PasswordUtils.hash_password(plain_pwd)
 
-    async def create_user(self, db: AsyncSession, create_user_schema: CreateUser) -> User:
+    async def create_user(
+        self, 
+        db: AsyncSession, 
+        create_user_schema: CreateUser
+    ) -> User:
         user_in = create_user_schema.model_dump()
         await self.hash_user_pwd(user_in)
         return await self.create(db, user_in)
@@ -49,7 +51,6 @@ class UserService(CRUDService[User]):
         user: User, 
         user_update_schema: UserUpdate
     ) -> None:
-        
         user_data = user_update_schema.model_dump(exclude_unset=True)
         if user_data.get('password'):
             await self.hash_user_pwd(user_data)
@@ -80,3 +81,4 @@ class UserService(CRUDService[User]):
 
 
 
+ 
