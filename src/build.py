@@ -1,7 +1,7 @@
-from src.db import init_db
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from typing import AsyncGenerator
 from fastapi import FastAPI
+from src.db.main import init_db
 
 
 @asynccontextmanager
