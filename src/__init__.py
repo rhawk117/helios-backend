@@ -1,13 +1,8 @@
-from src.config.app_config import settings
 from fastapi import FastAPI
-from contextlib import asynccontextmanager
-from src.db import init_db
-from typing import Any, AsyncGenerator
-import src.build as build_tools 
 
-'''
-work in progress, definitely not finished 
-'''
+import src.build as build_tools
+from src.config.app_config import settings
+
 app = FastAPI(
     title=settings.TITLE,
     description=settings.DESCRIPTION,
@@ -16,4 +11,3 @@ app = FastAPI(
     lifespan=build_tools.life_span
 )
 build_tools.register_routes(app)
-
