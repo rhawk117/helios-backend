@@ -11,7 +11,6 @@ async def life_span(app: FastAPI) -> AsyncGenerator:
     yield
     print("Shutting Down Application...")
 
-
 def register_routes(app: FastAPI) -> None:
     from src.user.routes import user_router
     app.include_router(user_router)

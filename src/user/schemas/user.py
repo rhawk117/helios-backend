@@ -1,7 +1,8 @@
 import enum
 from typing import Optional, Any
 from pydantic import BaseModel, EmailStr, Field, model_validator, ConfigDict
-from src.models.user import Permissions 
+from src.models.user import Permissions
+
 
 class ERRORS:
     DIGIT = "Password must contain at least one digit."
@@ -30,26 +31,39 @@ class ValidateUser:
         assert any(char.islower() for char in password), ERRORS.LOWER
         assert any(char.isupper() for char in password), ERRORS.UPPER
 
-class BaseUser(BaseModel):
-    username: str = Field(..., min_length=3, max_length=100)
-    password: str = Field(..., min_length=8, max_length=255)
-    email: EmailStr = Field(..., max_length=100)
+    @staticmethod
+    def check_permission(role: str) -> None:
+        assert role in [p.value for p in Permissions], "Invalid role."
 
-    @model_validator(mode='after')
-    def validate_user_create(cls, model) -> Any:
+    @staticmethod
+    def check_user_model(model):
         if model.username:
             ValidateUser.no_whitespace(model.username, "Username")
         if model.password:
             ValidateUser.check_pwd(model.password)
+        if model.permission:
+            ValidateUser.check_permission(model.permission)
+
+
+class BaseUser(BaseModel):
+    username: str = Field(..., min_length=3, max_length=100)
+    password: str = Field(..., min_length=8, max_length=255)
+    email: EmailStr = Field(..., max_length=100)
+    permission: str = Permissions.user.value
+
+    @model_validator(mode='after')
+    def validate_user_create(cls, model) -> Any:
+        ValidateUser.check_user_model(model)
         return model
 
 
 class CreateUser(BaseUser):
-    pass    
-
-class CreateAdmin(BaseUser):
-    permission: Permissions = Permissions.admin
-
+    @model_validator(mode='after')
+    def validate_user_create(cls, model) -> Any:
+        ValidateUser.check_user_model(model)
+        if model.permission != Permissions.user.value:
+            raise ValueError("A user cannot assign themselves a role.")
+        return model
 
 class UserUpdate(BaseUser):
     username: Optional[str] = Field(None, min_length=3, max_length=100)
@@ -63,19 +77,3 @@ class UserRead(BaseModel):
     email: EmailStr
     permission: Permissions
     model_config = ConfigDict(from_attributes=True)
-
-
-def main() -> None:
-    try:
-        base_user = CreateUser(
-            username="user",
-            password="Password1",
-            email="test@yahoo.com"
-        )
-        print(base_user.model_dump())
-    except ValueError as e:
-        print(str(e))
-
-
-if __name__ == '__main__':
-    main()

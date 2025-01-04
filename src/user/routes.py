@@ -1,29 +1,26 @@
 from typing import List
 
-from fastapi import Depends, HTTPException, status, APIRouter
+from fastapi import Depends, HTTPException, status, APIRouter, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.main import get_db
 from src.models import User
-from src.user.schemas.user import (
+from .schemas.user import (
     CreateUser,
     UserRead,
-    UserUpdate
+    UserUpdate,
+    DemoCreateUser
 )
 from src.user.service import UserService
 
 user_router = APIRouter(prefix="/user", tags=["user"])
 user_service = UserService()
 
-# v---------[PREFIXED ROUTES]---------v
-
-
 @user_router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def register_user(
     create_user_schema: CreateUser,
     db: AsyncSession = Depends(get_db)
 ) -> UserRead:
-
     if await user_service.username_exists(db, create_user_schema):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

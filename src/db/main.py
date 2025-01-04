@@ -32,7 +32,6 @@ SessionLocal = async_sessionmaker(
 class Base(DeclarativeBase):
     pass
 
-
 async def init_db() -> None:
     db_exists = os.path.exists("instance")
     os.makedirs("instance", exist_ok=True)

@@ -12,7 +12,6 @@ class Settings(BaseSettings):
     SECRET_KEY: str 
     ADMIN_SEED_PWD: str
     
-    
     DATABASE_URL: str
     DEBUG: bool = True 
     DB_ECHO: bool = True 

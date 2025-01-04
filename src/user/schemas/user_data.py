@@ -72,5 +72,5 @@
 #     minor: Optional[str]
 #     concentration: Optional[str]
 
-#     class Config:
+#     class Config:s
 #         orm_mode = True

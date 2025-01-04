@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.crud import CRUDService
 from src.utils.security import PasswordUtils
-from .schemas import (
+from .schemas.user import (
     CreateUser,
     UserUpdate,
     BaseUser
@@ -14,7 +14,7 @@ class UserService(CRUDService[User]):
     def __init__(self) -> None:
         super().__init__(User)
 
-    async def username_exists(self, db: AsyncSession, user_schema_obj: BaseUser) -> bool:
+    async def username_exists(self, db: AsyncSession, user_schema_obj: CreateUser) -> bool:
         existing_username = await self.get_by(
             User.username == user_schema_obj.username, db
         )
@@ -37,8 +37,8 @@ class UserService(CRUDService[User]):
         serialized_schema['password'] = PasswordUtils.hash_password(plain_pwd)
 
     async def create_user(
-        self, 
-        db: AsyncSession, 
+        self,
+        db: AsyncSession,
         create_user_schema: CreateUser
     ) -> User:
         user_in = create_user_schema.model_dump()
@@ -48,7 +48,7 @@ class UserService(CRUDService[User]):
     async def update_user(
         self,
         db: AsyncSession,
-        user: User, 
+        user: User,
         user_update_schema: UserUpdate
     ) -> None:
         user_data = user_update_schema.model_dump(exclude_unset=True)
@@ -78,7 +78,3 @@ class UserService(CRUDService[User]):
         return PasswordUtils.verify_password(
             password, user_model.password  # type: ignore
         )
-
-
-
- 
